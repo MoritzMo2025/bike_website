@@ -1,173 +1,66 @@
 <!doctype html>
 <html lang="de">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Support – Veloci Bikes</title>
+  <meta charset="utf-8">
+  <title>Lagerliste</title>
   <style>
-    body {margin:0;font-family:sans-serif;background:#fff;color:#111;}
-    header {position:sticky;top:0;background:#fff;padding:1rem;border-bottom:1px solid #ddd;}
-    .container {max-width:1200px;margin:auto;padding:0 1rem;}
-    nav a{margin-left:1rem;color:#111;text-decoration:none;font-weight:600}
-    nav a:hover{color:#2563eb}
-    main {padding:2rem 1rem;max-width:800px;margin:auto;}
-    h1 {font-size:2rem;margin-bottom:1rem;}
-    footer{padding:2rem 0;text-align:center;color:#555;font-size:.9rem;border-top:1px solid #eee}
-    label {
-      font-size: 18px;
-      margin-right: 10px;
-    }
-
-    select {
-      padding: 10px 15px;
-      font-size: 16px;
-      border: 2px solid #444;
-      border-radius: 8px;
-      background-color: #fff;
-      color: #333;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-      transition: all 0.3s ease;
-      cursor: pointer;
-    }
-
-    select:hover {
-      border-color: #007bff;
-      box-shadow: 0 6px 15px rgba(0,0,0,0.15);
-    }
-
-    select:focus {
-      outline: none;
-      border-color: #28a745;
-      box-shadow: 0 6px 15px rgba(0,0,0,0.2);
-    }
-
-    .small-img {
-      width: 400px;
-      height: auto;
-      border-radius: 12px;
-    }
-
-
+    body { font-family: system-ui, sans-serif; margin: 20px; }
+    ul { margin-top: 12px; padding-left: 18px; }
+    .muted { color:#666; }
   </style>
 </head>
 <body>
-  <header>
-    <div class="container">
-      <strong>Veloci Bikes</strong>
-      <nav>
-        <a href="index.html">Startseite</a>
-        <a href="01Support.html">Support</a>
-      </nav>
-    </div>
-  </header>
-
-  <main>
-    <h1>customize</h1>
-    <p style="font-size: 20px;">test</p>
 
   <label for="kategorien">Kategorie auswählen:</label>
-<select id="kategorien" name="kategorien">
-  <option value="laufradsatz">Laufradsatz</option>
-  <option value="rahmen">Rahmen</option>
-  <option value="bremsen">Bremsen</option>
-  <option value="schaltung">Schaltung</option>
-  <option value="pedale">Pedale</option>
-  <option value="kasette">Kasette</option>
-  <option value="umwerfer">Umwerfer</option>
-  <option value="schalthebel">Schalthebel</option>
-  <option value="lenker">Lenker</option>
-  <option value="vorbau">Vorbau</option>
-  <option value="lenkerband">Lenkerband</option>
-  <option value="sattel">Sattel</option>
-  <option value="sattelstütze">Sattelstütze</option>
-  <option value="sattelklemme">Sattelklemme</option>
-  <option value="flaschenhalter">Flaschenhalter</option>
-  <option value="zubehör">Zubehör</option>
-</select>
+  <select id="kategorien" name="kategorien">
+    <option value="">— bitte wählen —</option>
+    <option value="rahmen">Rahmen</option>
+    <option value="laufradsatz">Laufradsatz</option>
+    <option value="bremsen">Bremsen</option>
+    <option value="schaltung">Schaltung</option>
+    <option value="pedale">Pedale</option>
+    <option value="kasette">Kasette</option>
+    <option value="umwerfer">Umwerfer</option>
+    <option value="schalthebel">Schalthebel</option>
+    <option value="lenker">Lenker</option>
+    <option value="vorbau">Vorbau</option>
+    <option value="lenkerband">Lenkerband</option>
+    <option value="sattel">Sattel</option>
+    <option value="sattelstütze">Sattelstütze</option>
+    <option value="sattelklemme">Sattelklemme</option>
+    <option value="flaschenhalter">Flaschenhalter</option>
+    <option value="zubehör">Zubehör</option>
+  </select>
 
-<div id="status" class="muted">Lade CSV …</div>
   <ul id="ergebnis"><li class="muted">Noch keine Auswahl</li></ul>
 
-  <script>
-    // ==== CONFIG ====
-    const DATA_URL = "database.csv";      // CSV liegt im gleichen Ordner
-    const PREFERRED_LABELS = ["Artikel","Bezeichnung","Produkt","Name","Titel"];
-    const FALLBACK_LABEL = null;          // wenn null -> HEAD[0]
+  <!-- 1) Deine Daten als JS-Variable einbinden -->
+  <script src="data.js"></script>
 
-    // Mapping Dropdown -> Kategorie-Code in CSV
+  <!-- 2) Filter-Logik -->
+  <script>
+    // Mapping Dropdown -> Kategorie-Code in INVENTORY
     const CATEGORY_CODE = {
-      rahmen: "RMN"
-      // weitere: bremsen: "BRM", schaltung: "SCH", ...
+      rahmen: "RMN",
+      // hier gern erweitern: bremsen: "BRM", schaltung: "SCH", ...
     };
 
-    // ==== STATE ====
-    let HEAD = [];
-    let ROWS = [];
-    let CATEGORY_COL = null;
+    const CATEGORY_COL = "Kategorie"; // erkannte Spalte
+    const PREFERRED_LABELS = ["Artikel","Bezeichnung","Produkt","Name","Titel"];
 
-    const $status = document.getElementById("status");
-    const $list   = document.getElementById("ergebnis");
-    const $sel    = document.getElementById("kategorien");
-
-    // Small CSV parser (Delim , or ;, simple quotes support)
-    function parseCSV(text) {
-      // autodetect delimiter on header
-      const firstLine = text.split(/\r?\n/,1)[0] ?? "";
-      const delim = (firstLine.split(";").length > firstLine.split(",").length) ? ";" : ",";
-      const lines = text.replace(/\r/g,"").split("\n").filter(l => l.length>0);
-
-      // very simple CSV split that respects double quotes
-      const splitLine = (line) => {
-        const out = [];
-        let cur = "", inQ = false;
-        for (let i=0;i<line.length;i++){
-          const ch = line[i];
-          if (ch === '"') {
-            if (inQ && line[i+1] === '"') { cur += '"'; i++; } // escaped "
-            else inQ = !inQ;
-          } else if (ch === delim && !inQ) {
-            out.push(cur.trim());
-            cur = "";
-          } else {
-            cur += ch;
-          }
-        }
-        out.push(cur.trim());
-        return out;
-      };
-
-      const head = splitLine(lines[0]).map(s => s.replace(/^\uFEFF/, "")); // strip BOM if any
-      const rows = lines.slice(1).map(line => {
-        const cells = splitLine(line);
-        const obj = {};
-        head.forEach((h, i) => obj[h] = (cells[i] ?? "").trim());
-        return obj;
-      });
-      return {head, rows};
-    }
-
-    function log(msg) {
-      $status.textContent = msg;
-      // console.log(msg);
-    }
-
-    function detectCategoryColumn(head, rows) {
-      // 1) bevorzugte Namen
-      const candidates = ["Kategorie","Category","category","Produktkategorie","Cat","cat","KAT","kat","Code","code","Typ","Type"];
-      for (const c of candidates) if (head.includes(c)) return c;
-      // 2) Heuristik: eine Spalte, die RMN irgendwo enthält
-      for (const h of head) {
-        if (rows.some(r => (r[h]||"").toUpperCase().includes("RMN"))) return h;
-      }
-      return null;
-    }
+    const $sel  = document.getElementById("kategorien");
+    const $list = document.getElementById("ergebnis");
 
     function pickLabelKey(head) {
       for (const k of PREFERRED_LABELS) if (head.includes(k)) return k;
-      return FALLBACK_LABEL || head[0];
+      return head[0];
     }
 
-    function renderList(items, labelKey) {
+    // Kopfzeilen aus einem beliebigen Datensatz ableiten
+    const HEAD = INVENTORY.length ? Object.keys(INVENTORY[0]) : [];
+    const labelKey = pickLabelKey(HEAD);
+
+    function renderList(items) {
       if (!items.length) {
         $list.innerHTML = `<li class="muted">Keine Treffer.</li>`;
         return;
@@ -179,50 +72,17 @@
       return (s||"").toString().replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[m]));
     }
 
-    // Auswahl-Handler
-    $sel.addEventListener("change", () => {
-      const value = ($sel.value||"").toLowerCase();
-      const code = CATEGORY_CODE[value];
-      if (!code) {
-        renderList([], pickLabelKey(HEAD));
-        log(`Hinweis: Für „${value}“ ist noch kein Kategorie-Code im Mapping hinterlegt.`);
-        return;
-      }
-      if (!CATEGORY_COL) {
-        renderList([], pickLabelKey(HEAD));
-        log(`Kategorie-Spalte wurde nicht gefunden. (Suche nach RMN fehlgeschlagen)`);
-        return;
-      }
-      const labelKey = pickLabelKey(HEAD);
-      const hits = ROWS.filter(r => (r[CATEGORY_COL]||"").toUpperCase() === code);
-      renderList(hits, labelKey);
-      log(`Gefiltert: ${hits.length} Einträge für ${value} (Code ${code}) in Spalte „${CATEGORY_COL}“.`);
-    });
+    function applyFilter() {
+      const val  = ($sel.value || "").toLowerCase();
+      const code = CATEGORY_CODE[val];
+      if (!code) { renderList([]); return; }
+      const hits = (INVENTORY || []).filter(r => (r[CATEGORY_COL] || "").toUpperCase() === code);
+      renderList(hits);
+    }
 
-    // CSV laden
-    fetch(DATA_URL)
-      .then(r => {
-        if (!r.ok) throw new Error(`HTTP ${r.status}`);
-        return r.text();
-      })
-      .then(text => {
-        const {head, rows} = parseCSV(text);
-        HEAD = head;
-        ROWS = rows;
-        CATEGORY_COL = detectCategoryColumn(HEAD, ROWS);
-        log(`CSV geladen. Spalten: ${HEAD.join(", ")}\nErkannte Kategorie-Spalte: ${CATEGORY_COL ?? "—nicht gefunden—"}`);
-      })
-      .catch(err => {
-        log(`Konnte CSV nicht laden (${err.message}).\n→ Wenn du die HTML direkt öffnest (file://), blockt der Browser „fetch“.\nStarte kurz einen lokalen Server, z. B.:\n\n  python -m http.server 8000\n\nund öffne dann: http://localhost:8000`);
-      });
-  </main>
-
-  <footer>
-    © <span id="year"></span> Veloci Bikes
-  </footer>
-
-  <script>
-    document.getElementById('year').textContent = new Date().getFullYear();
+    $sel.addEventListener("change", applyFilter);
+    // Optional: direkt beim Laden filtern, wenn schon etwas vorausgewählt ist
+    applyFilter();
   </script>
 </body>
 </html>
